@@ -304,6 +304,9 @@ class BaseCoreScript {
 
         fetch(url, { headers: { 'credentials': 'same-origin', 'X-Requested-With': 'XMLHttpRequest', 'X-Get-Main-Content-Only': true } })
             .then(response => {
+		if (response.redirected) {
+		linkHref = response.url;
+		}
                 if (!response.ok) throw new Error('404 Not Found');
                 return response.text();
             })
