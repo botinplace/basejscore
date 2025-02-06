@@ -288,35 +288,46 @@ class BaseCoreScript {
     }
 
     updateContent(linkHref, back) {
-        console.clear();
-        const loadingBlock = document.getElementById('loading-block');
-        this.toggleClass(loadingBlock, 'hidden', 'remove');
+		console.clear();
+		this.infoBlock.classList.remove('show');
+		const loadingBlock = document.getElementById('loading-block');
+		this.toggleClass(loadingBlock, 'hidden', 'remove');
 
-        const navLinks = [...document.querySelectorAll(`${BaseCoreScript.navLinksParent} a`)];
-        navLinks.forEach(link => this.toggleClass(link, BaseCoreScript.selectedLinkClass, 'remove'));
+		const navLinks = [...document.querySelectorAll(`${BaseCoreScript.navLinksParent} a`)];
+		navLinks.forEach(link => this.toggleClass(link, BaseCoreScript.selectedLinkClass, 'remove'));
 
-        const normalizedLinkHref = new URL(linkHref, window.location.origin).href;
-        const currentLink = navLinks.find(link => new URL(link.href, window.location.origin).href === normalizedLinkHref);
-        if (currentLink) this.toggleClass(currentLink, BaseCoreScript.selectedLinkClass, 'add');
+		const normalizedLinkHref = new URL(linkHref, window.location.origin).href;
+		const currentLink = navLinks.find(link => new URL(link.href, window.location.origin).href === normalizedLinkHref);
+		if (currentLink) this.toggleClass(currentLink, BaseCoreScript.selectedLinkClass, 'add');
 
-        const url = new URL(linkHref, window.location.origin);
-        //url.searchParams.append('GetMainContentOnly', true);
+		const url = new URL(linkHref, window.location.origin);
+		// url.searchParams.append('GetMainContentOnly', true);
 
-        fetch(url, { headers: { 'credentials': 'same-origin', 'X-Requested-With': 'XMLHttpRequest', 'X-Get-Main-Content-Only': true } })
-            .then(response => {
-		if (response.redirected) {
-		linkHref = response.url;
-		}
-                if (!response.ok) throw new Error('404 Not Found');
-                return response.text();
-            })
-            .then(data => this.handleContentUpdate(data, linkHref, back, loadingBlock))
-            .catch(error => {
-                console.error("Ошибка при обновлении контента:", error);
-                this.showInfo('Не удалось загрузить страницу(', true);
-                this.toggleClass(loadingBlock, 'hidden', 'add');
-            });
-    }
+		fetch(url, { 
+			headers: { 'credentials': 'same-origin', 'X-Requested-With': 'XMLHttpRequest', 'X-Get-Main-Content-Only': true } 
+		})
+			.then(response => {
+				if (response.redirected) {
+					linkHref = response.url;
+				}
+
+				return response.text().then(text => {
+					return { error: !response.ok, status: response.status, body: text };
+				});
+			})
+			.then(({ error, status, body }) => {
+				this.handleContentUpdate(body, linkHref, back, loadingBlock);
+				if (error) {
+					console.error("Ошибка при обновлении контента:", status);
+					this.showInfo('Не удалось загрузить страницу(', true);
+				}
+			})
+			.catch(error => {
+				console.error("Ошибка при обновлении контента:", error);
+				this.showInfo('Не удалось загрузить страницу(', true);
+				this.toggleClass(loadingBlock, 'hidden', 'add');
+			});
+}
 
     handleContentUpdate(data, linkHref, back, loadingBlock) {
         const contentBlock = document.querySelector('.inner-content-body');
